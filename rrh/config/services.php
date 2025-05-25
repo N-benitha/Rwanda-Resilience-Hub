@@ -31,4 +31,21 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'openweathermap' => [
+        'api_key' => env('OPENWEATHERMAP_API_KEY'),
+        'base_url' => 'https://api.openweathermap.org/data/2.5/',
+        'one_call_url' => 'https://api.openweathermap.org/data/3.0/onecall',
+    ],
+
+    'nasa_power' => [
+        'base_url' => 'https://power.larc.nasa.gov/api/temporal/daily/point',
+        'parameters' => 'PRECTOTCORR,T2M,RH2M,WS10M,PS',
+    ],
+
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'base_url' => 'https://api.groq.com/openai/v1',
+        'model' => 'llama3-8b-8192',
+    ],
+
 ];
