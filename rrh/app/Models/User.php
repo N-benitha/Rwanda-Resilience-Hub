@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
     use HasFactory;
@@ -18,24 +18,17 @@ class User extends Authenticatable
     use Notifiable;
     use TwoFactorAuthenticatable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'location',
         'user_type',
+        'phone',
+        'location',
+        'organization',
+        'notification_preferences'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -43,76 +36,123 @@ class User extends Authenticatable
         'two_factor_secret',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'notification_preferences' => 'array'
     ];
 
-    /** Check if the user is an admin
-     * 
-     * @return bool
-    */
+    const USER_TYPES = [
+        'admin' => 'Administrator',
+        'emergency_manager' => 'Emergency Manager',
+        'weather_analyst' => 'Weather Analyst',
+        'field_coordinator' => 'Field Coordinator',
+        'public_user' => 'Public User'
+    ];
 
-    public function isAdmin()
+    public function scopeByType($query, string $type)
+    {
+        return $query->where('user_type', $type);
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->where('user_type', 'admin');
+    }
+
+    public function scopeEmergencyManagers($query)
+    {
+        return $query->where('user_type', 'emergency_manager');
+    }
+
+    public function scopeVerified($query)
+    {
+        return $query->whereNotNull('email_verified_at');
+    }
+
+    public function isAdmin(): bool
     {
         return $this->user_type === 'admin';
     }
 
-    /** Check if the user is an a government official
-     * 
-     * @return bool
-    */
-
-    public function isGovernment()
+    public function isEmergencyManager(): bool
     {
-        return $this->user_type === 'government';
+        return $this->user_type === 'emergency_manager';
     }
 
-    /** Check if the user is a civilian
-     * 
-     * @return bool
-    */
-
-    public function isCivilian()
+    public function isWeatherAnalyst(): bool
     {
-        return $this->user_type === 'civilian';
+        return $this->user_type === 'weather_analyst';
     }
 
-    /**
-     * Get all sensors associated with this user
-     */
-    public function sensors()
+    public function isFieldCoordinator(): bool
     {
-        return $this->hasMany(Sensor::class);
+        return $this->user_type === 'field_coordinator';
     }
 
-    /**
-     * Get all reports created by this user
-     */
+    public function isPublicUser(): bool
+    {
+        return $this->user_type === 'public_user';
+    }
+
+    public function canManageUsers(): bool
+    {
+        return in_array($this->user_type, ['admin', 'emergency_manager']);
+    }
+
+    public function canViewAllData(): bool
+    {
+        return in_array($this->user_type, ['admin', 'emergency_manager', 'weather_analyst']);
+    }
+
+    public function canGenerateReports(): bool
+    {
+        return in_array($this->user_type, ['admin', 'emergency_manager', 'weather_analyst']);
+    }
+
+    public function canAccessEmergencyFeatures(): bool
+    {
+        return in_array($this->user_type, ['admin', 'emergency_manager', 'field_coordinator']);
+    }
+
+    public function getUserTypeDisplayAttribute()
+    {
+        return self::USER_TYPES[$this->user_type] ?? ucfirst(str_replace('_', ' ', $this->user_type));
+    }
+
+    public function getNotificationPreference(string $key, $default = true)
+    {
+        return $this->notification_preferences[$key] ?? $default;
+    }
+
+    public function shouldReceiveFloodAlerts(): bool
+    {
+        return $this->getNotificationPreference('flood_alerts', true);
+    }
+
+    public function shouldReceiveWeatherUpdates(): bool
+    {
+        return $this->getNotificationPreference('weather_updates', true);
+    }
+
+    public function shouldReceiveSystemNotifications(): bool
+    {
+        return $this->getNotificationPreference('system_notifications', true);
+    }
+
     public function reports()
     {
         return $this->hasMany(Report::class);
     }
 
-    /**
-     * Get all flood predictions created by this user
-     */
-    public function predictions()
+    public function getDefaultNotificationPreferences(): array
     {
-        return $this->hasMany(FloodPrediction::class);
+        return [
+            'flood_alerts' => true,
+            'weather_updates' => true,
+            'system_notifications' => true,
+            'email_notifications' => true,
+            'sms_notifications' => false,
+            'emergency_alerts' => true
+        ];
     }
-
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array<int, string>
-     */
-    protected $appends = [
-        'profile_photo_url',
-    ];
 }
