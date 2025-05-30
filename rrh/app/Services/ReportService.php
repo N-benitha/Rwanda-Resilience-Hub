@@ -32,7 +32,7 @@ class ReportService
     {
         $periodStart = Carbon::parse($parameters['period_start'] ?? now()->subDays(7));
         $periodEnd = Carbon::parse($parameters['period_end'] ?? now());
-        $location = $parameters['location'] ?? null;
+        $location = $parameters['location_name'] ?? null;
 
         // Gather data
         $floodRisks = $this->getFloodRiskData($periodStart, $periodEnd, $location);
@@ -73,7 +73,7 @@ class ReportService
     {
         $periodStart = Carbon::parse($parameters['period_start'] ?? now()->subDays(30));
         $periodEnd = Carbon::parse($parameters['period_end'] ?? now());
-        $location = $parameters['location'] ?? null;
+        $location = $parameters['location_name'] ?? null;
 
         $weatherData = $this->getWeatherDataForReport($periodStart, $periodEnd, $location);
         $trends = $this->calculateWeatherTrends($weatherData);
@@ -455,8 +455,7 @@ Generate a JSON response with:
 
     public function exportReportToPDF(int $reportId): ?string
     {
-        // Implementation for PDF export would go here
-        // This is a placeholder for the PDF generation functionality
+        // Implementation for PDF export will go here
         return null;
     }
 }

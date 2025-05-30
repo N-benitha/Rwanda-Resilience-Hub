@@ -17,7 +17,7 @@ class Sensor extends Model
     protected $fillable = [
         'user_id',
         'name',
-        'location',
+        'location_name',
         'type',
         'is_connected',
         'last_reading_at',

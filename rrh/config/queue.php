@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -71,6 +71,42 @@ return [
             'after_commit' => false,
         ],
 
+        // Weather data processing queue
+        'weather' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'weather',
+            'retry_after' => 180,
+            'after_commit' => false,
+        ],
+
+        // Flood risk processing queue
+        'flood_risk' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'flood_risk',
+            'retry_after' => 300,
+            'after_commit' => false,
+        ],
+
+        // Report generation queue
+        'reports' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'reports',
+            'retry_after' => 600,
+            'after_commit' => false,
+        ],
+
+        // High priority queue for critical alerts
+        'alerts' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'alerts',
+            'retry_after' => 60,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*
@@ -85,7 +121,7 @@ return [
     */
 
     'batching' => [
-        'database' => env('DB_CONNECTION', 'mysql'),
+        'database' => env('DB_CONNECTION', 'pgsql'),
         'table' => 'job_batches',
     ],
 
@@ -101,9 +137,74 @@ return [
     */
 
     'failed' => [
-        'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'mysql'),
+        'driver' => env('QUEUE_FAILED_DRIVER', 'database'),
+        'database' => env('DB_CONNECTION', 'pgsql'),
         'table' => 'failed_jobs',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Worker Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the queue worker behavior including timeouts,
+    | memory limits, and sleep duration when no jobs are available.
+    |
+    */
+
+    'worker' => [
+        'sleep' => 3,
+        'timeout' => 60,
+        'memory' => 128,
+        'tries' => 3,
+        'force' => false,
+        'stop_when_empty' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Processing Priorities
+    |--------------------------------------------------------------------------
+    |
+    | Define the priority order for queue processing. Higher priority queues
+    | will be processed first when multiple queues have pending jobs.
+    |
+    */
+
+    'priorities' => [
+        'alerts' => 10,      // Highest priority for critical flood alerts
+        'flood_risk' => 8,   // High priority for risk calculations
+        'weather' => 5,      // Medium priority for weather data
+        'reports' => 3,      // Lower priority for report generation
+        'default' => 1,      // Lowest priority for general tasks
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retry Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure retry behavior for different types of jobs.
+    |
+    */
+
+    'retry' => [
+        'weather_fetch' => [
+            'tries' => 5,
+            'backoff' => [60, 120, 300, 600, 1200], // Exponential backoff in seconds
+        ],
+        'flood_risk_calculation' => [
+            'tries' => 3,
+            'backoff' => [30, 90, 180],
+        ],
+        'report_generation' => [
+            'tries' => 2,
+            'backoff' => [300, 900],
+        ],
+        'alert_notification' => [
+            'tries' => 5,
+            'backoff' => [10, 30, 60, 120, 300],
+        ],
     ],
 
 ];

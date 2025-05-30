@@ -33,12 +33,12 @@ return [
 
     'openweathermap' => [
         'api_key' => env('OPENWEATHERMAP_API_KEY'),
-        'base_url' => 'https://api.openweathermap.org/data/2.5/',
+        'base_url' => env('OPENWEATHERMAP_BASE_URL', 'https://api.openweathermap.org/data/2.5'),
         'one_call_url' => 'https://api.openweathermap.org/data/3.0/onecall',
     ],
 
     'nasa_power' => [
-        'base_url' => 'https://power.larc.nasa.gov/api/temporal/daily/point',
+        'base_url' => env('NASA_POWER_BASE_URL', 'https://power.larc.nasa.gov/api/temporal/daily/point'),
         'parameters' => 'PRECTOTCORR,T2M,RH2M,WS10M,PS',
     ],
 

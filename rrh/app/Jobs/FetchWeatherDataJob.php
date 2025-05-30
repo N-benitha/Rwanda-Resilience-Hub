@@ -73,7 +73,7 @@ class FetchWeatherDataJob implements ShouldQueue
             Log::error("Weather data fetch failed: " . $e->getMessage(), [
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
-                'location' => $this->locationName,
+                'location_name' => $this->locationName,
                 'exception' => $e
             ]);
             
@@ -131,7 +131,7 @@ class FetchWeatherDataJob implements ShouldQueue
         Log::error("FetchWeatherDataJob failed permanently", [
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
-            'location' => $this->locationName,
+            'location_name' => $this->locationName,
             'exception' => $exception->getMessage()
         ]);
     }

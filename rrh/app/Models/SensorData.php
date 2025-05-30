@@ -15,7 +15,7 @@ class SensorData extends Model
     protected $fillable = [
         'sensor_id',
         'sensor_type',
-        'location',
+        'location_name',
         'latitude',
         'longitude',
         'water_level',
@@ -61,7 +61,7 @@ class SensorData extends Model
 
     public function scopeForLocation($query, string $location)
     {
-        return $query->where('location', $location);
+        return $query->where('location_name', $location);
     }
 
     public function scopeBySensorType($query, string $type)
@@ -158,6 +158,6 @@ class SensorData extends Model
 
     public function floodRisks()
     {
-        return $this->hasMany(FloodRisk::class, 'location', 'location');
+        return $this->hasMany(FloodRisk::class, 'location_name', 'location_name');
     }
 }

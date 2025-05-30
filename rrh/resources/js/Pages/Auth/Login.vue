@@ -1,90 +1,137 @@
+<template>
+    <Head title="Login" />
+
+    <div class="min-h-screen bg-amber-800 flex items-center justify-center px-4">
+        <div class="w-full max-w-md">
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <!-- Logo and Title -->
+                <div class="text-center mb-8">
+                    <div class="flex items-center justify-center space-x-2 mb-4">
+                        <div class="w-12 h-12 bg-amber-800 rounded-full flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Rwanda</h1>
+                            <p class="text-sm text-gray-600">Resilience Hub</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login Form -->
+                <form @submit.prevent="submit">
+                    <div class="space-y-4">
+                        <!-- Username/Email Input -->
+                        <div>
+                            <input
+                                id="email"
+                                v-model="form.email"
+                                type="email"
+                                placeholder="Username"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-800 focus:border-transparent"
+                                required
+                                autofocus
+                                autocomplete="username"
+                            />
+                            <div v-if="form.errors.email" class="mt-2 text-sm text-red-600">
+                                {{ form.errors.email }}
+                            </div>
+                        </div>
+
+                        <!-- Password Input -->
+                        <div>
+                            <input
+                                id="password"
+                                v-model="form.password"
+                                type="password"
+                                placeholder="Password"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-800 focus:border-transparent"
+                                required
+                                autocomplete="current-password"
+                            />
+                            <div v-if="form.errors.password" class="mt-2 text-sm text-red-600">
+                                {{ form.errors.password }}
+                            </div>
+                        </div>
+
+                        <!-- Remember Me -->
+                        <div class="flex items-center">
+                            <input
+                                id="remember"
+                                v-model="form.remember"
+                                type="checkbox"
+                                class="h-4 w-4 text-amber-800 focus:ring-amber-800 border-gray-300 rounded"
+                            />
+                            <label for="remember" class="ml-2 block text-sm text-gray-700">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <!-- Login Button -->
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="w-full bg-amber-800 text-white py-3 px-4 rounded-lg font-medium hover:bg-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-800 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <span v-if="form.processing">Signing in...</span>
+                            <span v-else>Log In</span>
+                        </button>
+                    </div>
+
+                    <!-- Links -->
+                    <div class="mt-6 flex items-center justify-between text-sm">
+                        <Link
+                            v-if="route('password.request')"
+                            :href="route('password.request')"
+                            class="text-gray-600 hover:text-amber-800 transition-colors"
+                        >
+                            Forget password
+                        </Link>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-gray-600">Don't have account?</span>
+                            <Link
+                                :href="route('register')"
+                                class="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                            >
+                                Signup
+                            </Link>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</template>
+
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import AuthenticationCard from '@/Components/AuthenticationCard.vue';
-import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
-import Checkbox from '@/Components/Checkbox.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3'
 
 defineProps({
     canResetPassword: Boolean,
     status: String,
-});
+})
 
 const form = useForm({
     email: '',
     password: '',
     remember: false,
-});
+})
 
 const submit = () => {
-    form.transform(data => ({
-        ...data,
-        remember: form.remember ? 'on' : '',
-    })).post(route('login'), {
-        onFinish: () => form.reset('password'),
-    });
-};
+    console.log('Form submitted:', form.data());
+    
+    form.post(route('login'), {
+        onFinish: () => {
+            console.log('Form finished');            
+            form.reset('password')
+        },
+        onSuccess: () => {
+            console.log('Login successful');            
+        },
+        onError: (errors) => {
+            console.error('Login errors:', errors);
+        }
+    })
+}
 </script>
-
-<template>
-    <Head title="Log in" />
-
-    <AuthenticationCard>
-        <template #logo>
-            <AuthenticationCardLogo />
-        </template>
-
-        <div v-if="status" class="mb-4 font-medium text-sm text-green-600 dark:text-green-400">
-            {{ status }}
-        </div>
-
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
-                <TextInput
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-                <TextInput
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="current-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="block mt-4">
-                <label class="flex items-center">
-                    <Checkbox v-model:checked="form.remember" name="remember" />
-                    <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
-                </label>
-            </div>
-
-            <div class="flex items-center justify-end mt-4">
-                <Link v-if="canResetPassword" :href="route('password.request')" class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800">
-                    Forgot your password?
-                </Link>
-
-                <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Log in
-                </PrimaryButton>
-            </div>
-        </form>
-    </AuthenticationCard>
-</template>

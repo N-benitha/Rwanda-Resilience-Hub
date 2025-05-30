@@ -20,7 +20,7 @@ class WeatherController extends Controller
 
     public function index(Request $request)
     {
-        $location = $request->get('location', 'Kigali');
+        $location = $request->get('location_name', 'Kigali');
         $period = $request->get('period', '24h');
 
         $weatherData = $this->getWeatherData($location, $period);
@@ -31,10 +31,10 @@ class WeatherController extends Controller
 
     public function api(Request $request)
     {
-        $location = $request->get('location', 'Kigali');
+        $location = $request->get('location_name', 'Kigali');
         $limit = min($request->get('limit', 24), 100);
 
-        $data = WeatherData::where('location', $location)
+        $data = WeatherData::where('location_name', $location)
             ->latest()
             ->take($limit)
             ->get()
@@ -60,10 +60,10 @@ class WeatherController extends Controller
 
     public function current(Request $request)
     {
-        $location = $request->get('location', 'Kigali');
+        $location = $request->get('location_name', 'Kigali');
         
         $currentWeather = Cache::remember("current_weather_{$location}", 600, function () use ($location) {
-            return WeatherData::where('location', $location)
+            return WeatherData::where('location_name', $location)
                 ->latest()
                 ->first();
         });
@@ -75,7 +75,7 @@ class WeatherController extends Controller
         }
 
         return response()->json([
-            'location' => $currentWeather->location,
+            'location' => $currentWeather->location_name,
             'temperature' => $currentWeather->temperature,
             'humidity' => $currentWeather->humidity,
             'precipitation' => $currentWeather->precipitation,
@@ -90,7 +90,7 @@ class WeatherController extends Controller
 
     public function forecast(Request $request)
     {
-        $location = $request->get('location', 'Kigali');
+        $location = $request->get('location_name', 'Kigali');
         
         try {
             $forecast = $this->weatherService->getForecast($location);
@@ -116,7 +116,7 @@ class WeatherController extends Controller
             'end_date' => 'required|date|after:start_date',
         ]);
 
-        $location = $request->get('location');
+        $location = $request->get('location_name');
         $startDate = Carbon::parse($request->get('start_date'));
         $endDate = Carbon::parse($request->get('end_date'));
 
@@ -127,7 +127,7 @@ class WeatherController extends Controller
             ], 400);
         }
 
-        $historicalData = WeatherData::where('location', $location)
+        $historicalData = WeatherData::where('location_name', $location)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at')
             ->get()
@@ -161,7 +161,7 @@ class WeatherController extends Controller
         $weatherData = WeatherData::create($request->validated());
 
         // Clear relevant caches
-        $this->clearWeatherCaches($weatherData->location);
+        $this->clearWeatherCaches($weatherData->location_name);
 
         return response()->json([
             'message' => 'Weather data stored successfully',
@@ -171,7 +171,7 @@ class WeatherController extends Controller
 
     public function refresh(Request $request)
     {
-        $location = $request->get('location', 'Kigali');
+        $location = $request->get('location_name', 'Kigali');
 
         try {
             // Dispatch job to fetch fresh weather data
@@ -195,7 +195,7 @@ class WeatherController extends Controller
         $cacheKey = "weather_data_{$location}_{$period}";
         
         return Cache::remember($cacheKey, 300, function () use ($location, $period) {
-            $query = WeatherData::where('location', $location);
+            $query = WeatherData::where('location_name', $location);
 
             switch ($period) {
                 case '6h':
@@ -219,8 +219,8 @@ class WeatherController extends Controller
     protected function getAvailableLocations()
     {
         return Cache::remember('weather_locations', 3600, function () {
-            return WeatherData::distinct('location')
-                ->pluck('location')
+            return WeatherData::distinct('location_name')
+                ->pluck('location_name')
                 ->sort()
                 ->values();
         });

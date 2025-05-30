@@ -11,7 +11,7 @@ class FloodRisk extends Model
     use HasFactory;
 
     protected $fillable = [
-        'location',
+        'location_name',
         'date',
         'risk_level',
         'probability',
@@ -53,7 +53,7 @@ class FloodRisk extends Model
 
     public function scopeForLocation($query, string $location)
     {
-        return $query->where('location', $location);
+        return $query->where('location_name', $location);
     }
 
     public function scopeInDateRange($query, Carbon $startDate, Carbon $endDate)
@@ -125,7 +125,7 @@ class FloodRisk extends Model
 
     public function weatherData()
     {
-        return $this->hasMany(WeatherData::class, 'location', 'location');
+        return $this->hasMany(WeatherData::class, 'location_name', 'location_name');
     }
 
     public function reports()

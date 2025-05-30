@@ -35,7 +35,7 @@ class ProcessFloodRiskJob implements ShouldQueue
             Log::info("Processing flood risk for location: {$this->location}");
             
             // Get recent weather data for the location
-            $weatherData = WeatherData::where('location', $this->location)
+            $weatherData = WeatherData::where('location_name', $this->location)
                 ->where('created_at', '>=', Carbon::now()->subDays($this->timeframe))
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -51,7 +51,7 @@ class ProcessFloodRiskJob implements ShouldQueue
             // Store or update flood risk data
             FloodRisk::updateOrCreate(
                 [
-                    'location' => $this->location,
+                    'location_name' => $this->location,
                     'date' => Carbon::now()->format('Y-m-d')
                 ],
                 [

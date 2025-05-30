@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\WeatherController;
+use App\Http\Controllers\FloodRiskController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\ContactController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -24,73 +30,163 @@ Route::get('/', function () {
     ]);
 });
 
-// Authentication routes
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/register', [AuthController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
-});
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
-Route::middleware('auth')->group(function () {
-    // Logout route
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Route::post('/login', [LoginController::class, 'store']);
+
+Route::middleware([
+    'auth:sanctum',
+    config('jetstream.auth_session'),
+    'verified',
+])->group(function () {
+    // Dashboard Routes
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard', [
+            // 'canManageUsers' => auth()->user()->can('manage-users'),
+            // 'canViewReports' => auth()->user()->can('view-reports'),
+            // 'canAccessAdmin' => auth()->user()->is_admin,
+        ]);
+    })->name('dashboard');
     
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
-    // Flood prediction routes
-    Route::prefix('predictions')->group(function () {
-        Route::get('/', [FloodPredictionController::class, 'index'])->name('predictions.index');
-        Route::post('/location', [FloodPredictionController::class, 'predictByLocation'])->name('predictions.location');
-        Route::post('/sensor', [FloodPredictionController::class, 'predictBySensor'])->name('predictions.sensor');
-        Route::get('/{prediction}', [FloodPredictionController::class, 'show'])->name('predictions.show');
+    // Weather Routes
+    Route::prefix('weather')->name('weather.')->group(function () {
+        Route::get('/', [WeatherController::class, 'index'])->name('index');
+        Route::get('/current/{location?}', [WeatherController::class, 'current'])->name('current');
+        Route::get('/forecast/{location?}', [WeatherController::class, 'forecast'])->name('forecast');
+        Route::post('/store', [WeatherController::class, 'store'])->name('store');
     });
     
-    // Sensor routes available to all authenticated users
-    Route::prefix('sensors')->group(function () {
-        Route::get('/', [SensorController::class, 'index'])->name('sensors.index');
-        Route::get('/create', [SensorController::class, 'create'])->name('sensors.create');
-        Route::post('/', [SensorController::class, 'store'])->name('sensors.store');
-        Route::get('/{sensor}', [SensorController::class, 'show'])->name('sensors.show');
-        Route::get('/{sensor}/edit', [SensorController::class, 'edit'])->name('sensors.edit');
-        Route::put('/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
-        Route::delete('/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
-        Route::post('/readings', [FloodPredictionController::class, 'storeSensorReading'])->name('sensor.readings.store');
+    // Flood Risk Routes
+    Route::prefix('flood-risk')->name('flood-risk.')->group(function () {
+        Route::get('/', [FloodRiskController::class, 'index'])->name('index');
+        Route::get('/assess/{location?}', [FloodRiskController::class, 'assess'])->name('assess');
+        Route::post('/calculate', [FloodRiskController::class, 'calculate'])->name('calculate');
+        Route::get('/alerts', [FloodRiskController::class, 'alerts'])->name('alerts');
     });
     
-    // Reports routes
-    Route::prefix('reports')->group(function () {
-        Route::get('/', [ReportController::class, 'index'])->name('reports.index');
-        Route::get('/create', [ReportController::class, 'create'])->name('reports.create');
-        Route::post('/', [ReportController::class, 'store'])->name('reports.store');
-        Route::get('/{report}', [ReportController::class, 'show'])->name('reports.show');
-        Route::get('/generate/{prediction}', [ReportController::class, 'generateFromPrediction'])->name('reports.generate');
+    // Report Routes
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/create', [ReportController::class, 'create'])->name('create');
+        Route::post('/', [ReportController::class, 'store'])->name('store');
+        Route::get('/{report}', [ReportController::class, 'show'])->name('show');
+        Route::get('/{report}/download', [ReportController::class, 'download'])->name('download');
+        Route::delete('/{report}', [ReportController::class, 'destroy'])->name('destroy');
     });
     
-    // Admin and Government routes
-    Route::middleware(['government'])->prefix('admin')->group(function () {
-        // User management (admin only)
-        Route::middleware(['admin'])->group(function () {
-            Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
-            Route::get('/users/create', [UserController::class, 'create'])->name('admin.users.create');
-            Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
-            Route::get('/users/{user}', [UserController::class, 'show'])->name('admin.users.show');
-            Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
-            Route::put('/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
-            Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+    // Data Collection Routes
+    Route::prefix('data-collection')->name('data-collection.')->group(function () {
+        Route::get('/', function () {
+            return inertia('DataCollection/Index');
+        })->name('index');
+        
+        Route::post('/sensor-data', [WeatherController::class, 'storeSensorData'])->name('sensor-data.store');
+        Route::post('/upload-image', [WeatherController::class, 'uploadImage'])->name('upload-image');
+    });
+    
+    // Admin Routes
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
+        
+        // User Management
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [UserManagementController::class, 'index'])->name('index');
+            Route::post('/', [UserManagementController::class, 'store'])->name('store');
+            Route::put('/{user}', [UserManagementController::class, 'update'])->name('update');
+            Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('destroy');
+            Route::post('/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('toggle-status');
         });
         
-        // Monitor routes (admin and government)
-        Route::get('/monitor', [DashboardController::class, 'monitor'])->name('admin.monitor');
+        // System Monitoring
+        Route::prefix('monitoring')->name('monitoring.')->group(function () {
+            Route::get('/web-monitor', function () {
+                return inertia('Admin/WebMonitor');
+            })->name('web-monitor');
+            
+            Route::get('/permissions', function () {
+                return inertia('Admin/Permissions');
+            })->name('permissions');
+        });
         
-        // All predictions access
-        Route::get('/all-predictions', [FloodPredictionController::class, 'adminIndex'])->name('admin.predictions.index');
+        // System Settings
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', function () {
+                return inertia('Admin/Settings/Index');
+            })->name('index');
+            
+            Route::post('/api-keys', function () {
+                // Handle API key updates
+            })->name('api-keys.update');
+            
+            Route::post('/notifications', function () {
+                // Handle notification settings
+            })->name('notifications.update');
+        });
+    });
+    
+    // Resource Routes
+    Route::prefix('resources')->name('resources.')->group(function () {
+        Route::get('/', function () {
+            return inertia('Resources/Index');
+        })->name('index');
+        
+        Route::get('/documentation', function () {
+            return inertia('Resources/Documentation');
+        })->name('documentation');
+        
+        Route::get('/api-docs', function () {
+            return inertia('Resources/ApiDocs');
+        })->name('api-docs');
+        
+        Route::get('/help', function () {
+            return inertia('Resources/Help');
+        })->name('help');
     });
 });
 
-// API endpoints for IoT devices
-Route::prefix('api')->group(function () {
-    Route::post('/sensor-data', [FloodPredictionController::class, 'apiSensorData']);
+// Public API endpoints for basic weather data (rate limited)
+Route::prefix('public-api')->middleware(['throttle:60,1'])->group(function () {
+    Route::get('/weather/current/{location}', [WeatherController::class, 'publicCurrent']);
+    Route::get('/flood-risk/status/{location}', [FloodRiskController::class, 'publicStatus']);
 });
+
+
+// Health check endpoint
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'timestamp' => now()->toISOString(),
+        'services' => [
+            'database' => DB::connection()->getPdo() ? 'connected' : 'disconnected',
+            'cache' => Cache::store()->getStore() ? 'connected' : 'disconnected',
+            'queue' => 'operational'
+        ]
+    ]);
+})->name('health');
+
+// Sitemap
+Route::get('/sitemap.xml', function () {
+    $sitemap = '<?xml version="1.0" encoding="UTF-8"?>';
+    $sitemap .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    
+    // Add main pages
+    $pages = [
+        route('dashboard'),
+        route('weather.index'),
+        route('flood-risk.index'),
+        route('reports.index')
+    ];
+    
+    foreach ($pages as $url) {
+        $sitemap .= '<url>';
+        $sitemap .= '<loc>' . $url . '</loc>';
+        $sitemap .= '<lastmod>' . now()->format('Y-m-d') . '</lastmod>';
+        $sitemap .= '<changefreq>daily</changefreq>';
+        $sitemap .= '<priority>0.8</priority>';
+        $sitemap .= '</url>';
+    }
+    
+    $sitemap .= '</urlset>';
+    
+    return response($sitemap)->header('Content-Type', 'application/xml');
+})->name('sitemap');

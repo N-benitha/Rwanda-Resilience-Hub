@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\WeatherData;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Carbon\Carbon;
 
 class WeatherDataFactory extends Factory
 {
@@ -12,106 +11,63 @@ class WeatherDataFactory extends Factory
 
     public function definition(): array
     {
-        $locations = [
+        // Rwanda coordinates bounds
+        $rwandaLocations = [
             ['name' => 'Kigali', 'lat' => -1.9441, 'lng' => 30.0619],
             ['name' => 'Butare', 'lat' => -2.5967, 'lng' => 29.7395],
-            ['name' => 'Gisenyi', 'lat' => -1.7030, 'lng' => 29.2569],
-            ['name' => 'Ruhengeri', 'lat' => -1.4983, 'lng' => 29.6339],
-            ['name' => 'Gitarama', 'lat' => -2.0758, 'lng' => 29.7564]
+            ['name' => 'Gitarama', 'lat' => -2.0742, 'lng' => 29.7570],
+            ['name' => 'Ruhengeri', 'lat' => -1.4993, 'lng' => 29.6333],
+            ['name' => 'Gisenyi', 'lat' => -1.7049, 'lng' => 29.2565],
+            ['name' => 'Byumba', 'lat' => -1.5756, 'lng' => 30.0677],
+            ['name' => 'Cyangugu', 'lat' => -2.4841, 'lng' => 28.9070],
+            ['name' => 'Kibungo', 'lat' => -2.1542, 'lng' => 30.7425],
         ];
 
-        $location = $this->faker->randomElement($locations);
-        $conditions = ['Clear', 'Partly Cloudy', 'Cloudy', 'Rain', 'Thunderstorm', 'Drizzle'];
-        $selectedCondition = $this->faker->randomElement($conditions);
-
+        $location = $this->faker->randomElement($rwandaLocations);
+        
         return [
-            'location' => $location['name'],
             'latitude' => $location['lat'] + $this->faker->randomFloat(4, -0.1, 0.1),
             'longitude' => $location['lng'] + $this->faker->randomFloat(4, -0.1, 0.1),
-            'temperature' => $this->faker->randomFloat(2, 15, 35),
-            'humidity' => $this->faker->numberBetween(30, 95),
-            'pressure' => $this->faker->randomFloat(2, 950, 1050),
-            'precipitation' => $this->getPrecipitationForCondition($selectedCondition),
+            'location_name' => $location['name'], // Changed from 'location' to 'location_name'
+            'temperature' => $this->faker->randomFloat(2, 15, 30), // Rwanda typical temps
+            'humidity' => $this->faker->randomFloat(2, 40, 95),
+            'precipitation' => $this->faker->randomFloat(2, 0, 200),
             'wind_speed' => $this->faker->randomFloat(2, 0, 25),
-            'wind_direction' => $this->faker->numberBetween(0, 359),
-            'visibility' => $this->faker->randomFloat(2, 1, 50),
-            'weather_condition' => $selectedCondition,
-            'weather_description' => $this->getDescriptionForCondition($selectedCondition),
-            'cloud_cover' => $this->getCloudCoverForCondition($selectedCondition),
-            'uv_index' => $this->faker->randomFloat(1, 0, 11),
-            'solar_radiation' => $this->faker->randomFloat(2, 0, 1000),
-            'recorded_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
-            'api_source' => $this->faker->randomElement(['openweather', 'nasa'])
+            'pressure' => $this->faker->randomFloat(2, 1000, 1020),
+            'weather_condition' => $this->faker->randomElement([
+                'clear', 'partly_cloudy', 'cloudy', 'rainy', 'thunderstorm', 'drizzle'
+            ]),
+            'description' => $this->faker->sentence(),
+            'raw_data' => json_encode([
+                'source_id' => $this->faker->uuid(),
+                'api_version' => '2.5',
+                'quality_score' => $this->faker->randomFloat(2, 0.8, 1.0)
+            ]),
+            'data_source' => $this->faker->randomElement(['openweathermap', 'nasa_power']),
+            'recorded_at' => $this->faker->dateTimeBetween('-7 days', 'now'),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 
-    private function getPrecipitationForCondition(string $condition): float
-    {
-        return match ($condition) {
-            'Clear' => 0,
-            'Partly Cloudy' => $this->faker->randomFloat(2, 0, 2),
-            'Cloudy' => $this->faker->randomFloat(2, 0, 5),
-            'Drizzle' => $this->faker->randomFloat(2, 1, 8),
-            'Rain' => $this->faker->randomFloat(2, 5, 25),
-            'Thunderstorm' => $this->faker->randomFloat(2, 10, 50),
-            default => $this->faker->randomFloat(2, 0, 10)
-        };
-    }
-
-    private function getDescriptionForCondition(string $condition): string
-    {
-        return match ($condition) {
-            'Clear' => $this->faker->randomElement(['clear sky', 'sunny']),
-            'Partly Cloudy' => $this->faker->randomElement(['few clouds', 'scattered clouds']),
-            'Cloudy' => $this->faker->randomElement(['broken clouds', 'overcast clouds']),
-            'Drizzle' => $this->faker->randomElement(['light drizzle', 'drizzle']),
-            'Rain' => $this->faker->randomElement(['light rain', 'moderate rain', 'heavy rain']),
-            'Thunderstorm' => $this->faker->randomElement(['thunderstorm with rain', 'heavy thunderstorm']),
-            default => 'unknown'
-        };
-    }
-
-    private function getCloudCoverForCondition(string $condition): int
-    {
-        return match ($condition) {
-            'Clear' => $this->faker->numberBetween(0, 20),
-            'Partly Cloudy' => $this->faker->numberBetween(20, 60),
-            'Cloudy' => $this->faker->numberBetween(60, 90),
-            'Rain', 'Thunderstorm', 'Drizzle' => $this->faker->numberBetween(80, 100),
-            default => $this->faker->numberBetween(0, 100)
-        };
-    }
-
-    public function highPrecipitation(): static
+    public function openWeatherMap(): static
     {
         return $this->state(fn (array $attributes) => [
-            'precipitation' => $this->faker->randomFloat(2, 20, 80),
-            'weather_condition' => $this->faker->randomElement(['Rain', 'Thunderstorm']),
-            'cloud_cover' => $this->faker->numberBetween(80, 100)
+            'data_source' => 'openweathermap',
         ]);
     }
 
-    public function forLocation(string $location): static
+    public function nasaPower(): static
     {
-        $coordinates = $this->getCoordinatesForLocation($location);
-        
         return $this->state(fn (array $attributes) => [
-            'location' => $location,
-            'latitude' => $coordinates['lat'],
-            'longitude' => $coordinates['lng']
+            'data_source' => 'nasa_power',
         ]);
     }
 
-    private function getCoordinatesForLocation(string $location): array
+    public function recent(): static
     {
-        $locations = [
-            'Kigali' => ['lat' => -1.9441, 'lng' => 30.0619],
-            'Butare' => ['lat' => -2.5967, 'lng' => 29.7395],
-            'Gisenyi' => ['lat' => -1.7030, 'lng' => 29.2569],
-            'Ruhengeri' => ['lat' => -1.4983, 'lng' => 29.6339],
-            'Gitarama' => ['lat' => -2.0758, 'lng' => 29.7564]
-        ];
-
-        return $locations[$location] ?? ['lat' => -2.0, 'lng' => 30.0];
+        return $this->state(fn (array $attributes) => [
+            'recorded_at' => $this->faker->dateTimeBetween('-1 day', 'now'),
+        ]);
     }
 }

@@ -49,7 +49,7 @@ class DashboardController extends Controller
                 'active_sensors' => \App\Models\SensorData::distinct('sensor_id')->count(),
                 'weather_data_points' => WeatherData::count(),
                 'high_risk_areas' => FloodRisk::where('risk_level', 'high')->count(),
-                'recent_weather_data' => WeatherData::with(['location'])
+                'recent_weather_data' => WeatherData::with(['location_name'])
                     ->latest()
                     ->take(10)
                     ->get(),
@@ -62,13 +62,13 @@ class DashboardController extends Controller
 
     protected function getWeatherSummary()
     {
-        return WeatherData::select('location', 'temperature', 'humidity', 'precipitation', 'created_at')
+        return WeatherData::select('location_name', 'temperature', 'humidity', 'precipitation', 'created_at')
             ->latest()
             ->take(5)
             ->get()
             ->map(function ($data) {
                 return [
-                    'location' => $data->location,
+                    'location_name' => $data->location,
                     'temperature' => $data->temperature,
                     'humidity' => $data->humidity,
                     'precipitation' => $data->precipitation,
@@ -86,7 +86,7 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($risk) {
                 return [
-                    'location' => $risk->location,
+                    'location_name' => $risk->location,
                     'risk_level' => $risk->risk_level,
                     'risk_score' => $risk->risk_score,
                     'predicted_at' => $risk->created_at->format('M d, H:i'),
@@ -121,7 +121,7 @@ class DashboardController extends Controller
     protected function getStatistics()
     {
         return [
-            'weather_stations' => WeatherData::distinct('location')->count(),
+            'weather_stations' => WeatherData::distinct('location_name')->count(),
             'predictions_today' => FloodRisk::whereDate('created_at', Carbon::today())->count(),
             'high_risk_alerts' => FloodRisk::where('risk_level', 'high')
                 ->where('created_at', '>=', Carbon::now()->subHours(24))

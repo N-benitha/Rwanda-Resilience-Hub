@@ -9,7 +9,7 @@ use App\Models\WeatherData;
 class FetchWeatherDataCommand extends Command
 {
     protected $signature = 'weather:fetch 
-                            {--location=* : Specific locations to fetch (default: all Rwanda cities)}
+                            {--location_name=* : Specific locations to fetch (default: all Rwanda cities)}
                             {--force : Force fetch even if recent data exists}
                             {--forecast : Include forecast data}';
 
@@ -30,7 +30,7 @@ class FetchWeatherDataCommand extends Command
     {
         $this->info('Starting weather data fetch process...');
 
-        $locations = $this->option('location');
+        $locations = $this->option('location_name');
         $force = $this->option('force');
         $includeForecast = $this->option('forecast');
 

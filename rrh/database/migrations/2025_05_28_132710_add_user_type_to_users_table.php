@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('user_type', ['admin', 'government', 'civilian'])->default('civilian');
-            $table->string('location')->nullable();
+            $table->enum('user_type', ['admin', 'government', 'civilian', 'meteorologist'])->default('civilian');
+            $table->string('location_name')->nullable();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
             $table->boolean('receive_alerts')->default(true);
@@ -23,7 +23,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn([
                 'user_type',
-                'location',
+                'location_name',
                 'latitude',
                 'longitude',
                 'receive_alerts',

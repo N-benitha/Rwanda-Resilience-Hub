@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_DRIVER', 'file'),
+    'default' => env('CACHE_DRIVER', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -27,7 +27,7 @@ return [
     | same cache driver to group types of items stored in your caches.
     |
     | Supported drivers: "apc", "array", "database", "file",
-    |         "memcached", "redis", "dynamodb", "octane", "null"
+    |            "memcached", "redis", "dynamodb", "octane", "null"
     |
     */
 
@@ -52,7 +52,6 @@ return [
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
-            'lock_path' => storage_path('framework/cache/data'),
         ],
 
         'memcached' => [
@@ -93,6 +92,38 @@ return [
             'driver' => 'octane',
         ],
 
+        // Weather API specific cache store with longer TTL
+        'weather_cache' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'prefix' => 'weather:',
+            'lock_connection' => 'default',
+        ],
+
+        // Flood prediction cache with medium TTL
+        'flood_cache' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'prefix' => 'flood:',
+            'lock_connection' => 'default',
+        ],
+
+        // Reports cache for frequently accessed reports
+        'reports_cache' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'prefix' => 'reports:',
+            'lock_connection' => 'default',
+        ],
+
+        // Short-term cache for real-time data
+        'realtime_cache' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'prefix' => 'realtime:',
+            'lock_connection' => 'default',
+        ],
+
     ],
 
     /*
@@ -100,12 +131,115 @@ return [
     | Cache Key Prefix
     |--------------------------------------------------------------------------
     |
-    | When utilizing the APC, database, memcached, Redis, or DynamoDB cache
-    | stores there might be other applications using the same cache. For
-    | that reason, you may prefix every cache key to avoid collisions.
+    | When utilizing a RAM based store such as APC or Memcached, there might
+    | be other applications utilizing the same cache. So, we'll specify a
+    | value to get prefixed to all our keys so we can avoid collisions.
     |
     */
 
-    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_'),
+    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache TTL Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Define default TTL values for different types of cached data
+    | in the Rwanda Resilience Hub application.
+    |
+    */
+
+    'ttl' => [
+        // Weather data cache (1 hour as specified)
+        'weather_data' => 3600, // 60 minutes
+        
+        // NASA POWER API data (longer cache due to historical nature)
+        'nasa_power_data' => 7200, // 2 hours
+        
+        // OpenWeatherMap current weather
+        'current_weather' => 1800, // 30 minutes
+        
+        // Weather forecast data
+        'weather_forecast' => 3600, // 1 hour
+        
+        // Flood risk predictions
+        'flood_predictions' => 1800, // 30 minutes
+        
+        // Historical flood data
+        'historical_floods' => 86400, // 24 hours
+        
+        // Reports cache
+        'reports' => 7200, // 2 hours
+        
+        // Dashboard data
+        'dashboard_data' => 900, // 15 minutes
+        
+        // User statistics
+        'user_stats' => 3600, // 1 hour
+        
+        // System alerts
+        'system_alerts' => 300, // 5 minutes
+        
+        // Sensor data aggregates
+        'sensor_aggregates' => 1800, // 30 minutes
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Tags Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Define cache tags for better cache invalidation strategies.
+    | Tags help group related cache entries for bulk operations.
+    |
+    */
+
+    'tags' => [
+        'weather' => 'weather_data',
+        'flood' => 'flood_risk',
+        'reports' => 'generated_reports',
+        'sensors' => 'sensor_data',
+        'users' => 'user_data',
+        'dashboard' => 'dashboard_cache',
+        'alerts' => 'system_alerts',
+        'api' => 'external_api',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Lock Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure cache locks to prevent race conditions when updating
+    | cached data, especially important for weather data fetching.
+    |
+    */
+
+    'locks' => [
+        'weather_fetch' => 300, // 5 minutes lock for weather data fetching
+        'flood_calculation' => 600, // 10 minutes for flood risk calculations
+        'report_generation' => 900, // 15 minutes for report generation
+        'sensor_processing' => 180, // 3 minutes for sensor data processing
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Warming Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Define which cache keys should be warmed up during application
+    | startup or scheduled maintenance.
+    |
+    */
+
+    'warming' => [
+        'enabled' => env('CACHE_WARMING_ENABLED', true),
+        'keys' => [
+            'dashboard_summary',
+            'current_weather_kigali',
+            'active_flood_alerts',
+            'system_status',
+        ],
+    ],
 
 ];

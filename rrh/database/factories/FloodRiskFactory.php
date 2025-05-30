@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\FloodRisk;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Carbon\Carbon;
 
 class FloodRiskFactory extends Factory
 {
@@ -12,139 +11,100 @@ class FloodRiskFactory extends Factory
 
     public function definition(): array
     {
-        $locations = ['Kigali', 'Butare', 'Gisenyi', 'Ruhengeri', 'Gitarama'];
-        $riskLevels = ['low', 'moderate', 'high', 'extreme'];
-        $severityLevels = ['minor', 'moderate', 'significant', 'severe', 'catastrophic'];
-        
-        $riskLevel = $this->faker->randomElement($riskLevels);
-        $probability = $this->getProbabilityForRiskLevel($riskLevel);
-        $severity = $this->getSeverityForRiskLevel($riskLevel);
+        // Rwanda coordinates bounds with flood-prone areas
+        $rwandaRiskAreas = [
+            ['name' => 'Kigali City', 'lat' => -1.9441, 'lng' => 30.0619, 'base_risk' => 30],
+            ['name' => 'Nyabugogo Valley', 'lat' => -1.9350, 'lng' => 30.0588, 'base_risk' => 70],
+            ['name' => 'Rusizi Valley', 'lat' => -2.4841, 'lng' => 28.9070, 'base_risk' => 80],
+            ['name' => 'Akagera Basin', 'lat' => -2.1542, 'lng' => 30.7425, 'base_risk' => 60],
+            ['name' => 'Ruhengeri Plains', 'lat' => -1.4993, 'lng' => 29.6333, 'base_risk' => 45],
+            ['name' => 'Kivu Lake Shore', 'lat' => -1.7049, 'lng' => 29.2565, 'base_risk' => 55],
+        ];
+
+        $location = $this->faker->randomElement($rwandaRiskAreas);
+        $riskPercentage = $location['base_risk'] + $this->faker->numberBetween(-20, 20);
+        $riskPercentage = max(0, min(100, $riskPercentage)); // Clamp between 0-100
+
+        // Determine risk level based on percentage
+        $riskLevel = match (true) {
+            $riskPercentage >= 80 => 'critical',
+            $riskPercentage >= 60 => 'high',
+            $riskPercentage >= 30 => 'moderate',
+            default => 'low'
+        };
+
+        $predictionDate = $this->faker->dateTimeBetween('now', '+7 days');
+        $validUntil = (clone $predictionDate)->modify('+24 hours');
 
         return [
-            'location' => $this->faker->randomElement($locations),
-            'date' => $this->faker->dateTimeBetween('-30 days', '+7 days')->format('Y-m-d'),
+            'latitude' => $location['lat'] + $this->faker->randomFloat(4, -0.05, 0.05),
+            'longitude' => $location['lng'] + $this->faker->randomFloat(4, -0.05, 0.05),
+            'location_name' => $location['name'],
+            'risk_percentage' => $riskPercentage,
             'risk_level' => $riskLevel,
-            'probability' => $probability,
-            'severity' => $severity,
-            'factors' => $this->generateFactors($riskLevel),
-            'recommendations' => $this->generateRecommendations($riskLevel),
-            'precipitation_7day' => $this->faker->randomFloat(2, 0, 200),
-            'temperature_avg' => $this->faker->randomFloat(2, 15, 35),
-            'humidity_avg' => $this->faker->randomFloat(2, 40, 95),
-            'calculated_at' => $this->faker->dateTimeBetween('-1 hour', 'now')
+            'predicted_precipitation' => $this->faker->randomFloat(2, 0, 150),
+            'soil_moisture_level' => $this->faker->randomFloat(2, 20, 95),
+            'river_level' => $this->faker->randomFloat(2, 0.5, 8.0),
+            'contributing_factors' => json_encode([
+                'recent_rainfall' => $this->faker->randomFloat(2, 0, 100),
+                'soil_saturation' => $this->faker->randomFloat(2, 0, 100),
+                'river_flow_rate' => $this->faker->randomFloat(2, 0, 50),
+                'topography_factor' => $this->faker->randomFloat(2, 0.1, 1.0),
+                'deforestation_impact' => $this->faker->randomFloat(2, 0, 0.8),
+            ]),
+            'ai_analysis' => json_encode([
+                'model_confidence' => $this->faker->randomFloat(2, 0.7, 0.98),
+                'key_indicators' => $this->faker->randomElements([
+                    'high_precipitation_forecast',
+                    'saturated_soil_conditions',
+                    'elevated_river_levels',
+                    'upstream_rainfall',
+                    'poor_drainage'
+                ], $this->faker->numberBetween(2, 4)),
+                'recommendation' => $this->faker->randomElement([
+                    'monitor_closely',
+                    'prepare_evacuation_routes',
+                    'issue_early_warning',
+                    'activate_emergency_response'
+                ]),
+                'historical_precedent' => $this->faker->boolean(70),
+            ]),
+            'prediction_date' => $predictionDate,
+            'valid_until' => $validUntil,
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 
-    private function getProbabilityForRiskLevel(string $riskLevel): float
+    public function lowRisk(): static
     {
-        return match ($riskLevel) {
-            'low' => $this->faker->randomFloat(2, 0, 25),
-            'moderate' => $this->faker->randomFloat(2, 25, 50),
-            'high' => $this->faker->randomFloat(2, 50, 80),
-            'extreme' => $this->faker->randomFloat(2, 80, 100),
-            default => $this->faker->randomFloat(2, 0, 100)
-        };
+        return $this->state(fn (array $attributes) => [
+            'risk_percentage' => $this->faker->randomFloat(2, 0, 29),
+            'risk_level' => 'low',
+        ]);
     }
 
-    private function getSeverityForRiskLevel(string $riskLevel): string
+    public function moderateRisk(): static
     {
-        return match ($riskLevel) {
-            'low' => $this->faker->randomElement(['minor', 'moderate']),
-            'moderate' => $this->faker->randomElement(['moderate', 'significant']),
-            'high' => $this->faker->randomElement(['significant', 'severe']),
-            'extreme' => $this->faker->randomElement(['severe', 'catastrophic']),
-            default => 'moderate'
-        };
-    }
-
-    private function generateFactors(string $riskLevel): array
-    {
-        $allFactors = [
-            'Heavy rainfall in the past 7 days',
-            'Saturated soil conditions',
-            'High river water levels',
-            'Poor drainage infrastructure',
-            'Deforestation in watershed areas',
-            'Urban development in flood zones',
-            'Blocked drainage channels',
-            'Steep terrain topography',
-            'Previous flood history',
-            'Seasonal weather patterns',
-            'Climate change impacts',
-            'Infrastructure vulnerability'
-        ];
-
-        $factorCount = match ($riskLevel) {
-            'low' => $this->faker->numberBetween(1, 3),
-            'moderate' => $this->faker->numberBetween(2, 4),
-            'high' => $this->faker->numberBetween(3, 6),
-            'extreme' => $this->faker->numberBetween(4, 8),
-            default => 3
-        };
-
-        return $this->faker->randomElements($allFactors, $factorCount);
-    }
-
-    private function generateRecommendations(string $riskLevel): array
-    {
-        $recommendations = [
-            'low' => [
-                'Monitor weather forecasts regularly',
-                'Ensure drainage systems are clear',
-                'Review emergency evacuation plans',
-                'Check flood insurance coverage'
-            ],
-            'moderate' => [
-                'Prepare emergency supply kits',
-                'Identify safe evacuation routes',
-                'Monitor local water levels',
-                'Secure outdoor equipment',
-                'Stay informed through official channels'
-            ],
-            'high' => [
-                'Consider temporary evacuation',
-                'Move valuables to higher ground',
-                'Avoid travel in flood-prone areas',
-                'Prepare for power outages',
-                'Keep emergency contacts ready',
-                'Monitor weather alerts continuously'
-            ],
-            'extreme' => [
-                'Evacuate immediately if advised',
-                'Avoid all unnecessary travel',
-                'Stay on higher ground',
-                'Have emergency supplies ready',
-                'Follow official evacuation orders',
-                'Prepare for extended disruptions',
-                'Keep battery-powered radio available'
-            ]
-        ];
-
-        return $recommendations[$riskLevel] ?? $recommendations['moderate'];
+        return $this->state(fn (array $attributes) => [
+            'risk_percentage' => $this->faker->randomFloat(2, 30, 59),
+            'risk_level' => 'moderate',
+        ]);
     }
 
     public function highRisk(): static
     {
         return $this->state(fn (array $attributes) => [
-            'risk_level' => $this->faker->randomElement(['high', 'extreme']),
-            'probability' => $this->faker->randomFloat(2, 60, 100),
-            'severity' => $this->faker->randomElement(['severe', 'catastrophic']),
-            'precipitation_7day' => $this->faker->randomFloat(2, 50, 200)
+            'risk_percentage' => $this->faker->randomFloat(2, 60, 79),
+            'risk_level' => 'high',
         ]);
     }
 
-    public function forLocation(string $location): static
+    public function criticalRisk(): static
     {
         return $this->state(fn (array $attributes) => [
-            'location' => $location
-        ]);
-    }
-
-    public function recent(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'date' => $this->faker->dateTimeBetween('-7 days', 'now')->format('Y-m-d'),
-            'calculated_at' => $this->faker->dateTimeBetween('-6 hours', 'now')
+            'risk_percentage' => $this->faker->randomFloat(2, 80, 100),
+            'risk_level' => 'critical',
         ]);
     }
 }

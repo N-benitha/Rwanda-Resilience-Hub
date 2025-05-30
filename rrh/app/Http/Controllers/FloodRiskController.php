@@ -21,7 +21,7 @@ class FloodRiskController extends Controller
 
     public function index(Request $request)
     {
-        $location = $request->get('location');
+        $location = $request->get('location_name');
         $riskLevel = $request->get('risk_level');
         $period = $request->get('period', '24h');
 
@@ -43,7 +43,7 @@ class FloodRiskController extends Controller
     {
         $floodRisk->load(['weatherData']);
         
-        $relatedRisks = FloodRisk::where('location', $floodRisk->location)
+        $relatedRisks = FloodRisk::where('location_name', $floodRisk->location_name)
             ->where('id', '!=', $floodRisk->id)
             ->where('created_at', '>=', Carbon::now()->subDays(7))
             ->latest()
@@ -55,13 +55,13 @@ class FloodRiskController extends Controller
 
     public function api(Request $request)
     {
-        $location = $request->get('location');
+        $location = $request->get('location_name');
         $limit = min($request->get('limit', 50), 100);
 
         $query = FloodRisk::with(['weatherData']);
 
         if ($location) {
-            $query->where('location', $location);
+            $query->where('location_name', $location);
         }
 
         $risks = $query->latest()
@@ -70,7 +70,7 @@ class FloodRiskController extends Controller
             ->map(function ($risk) {
                 return [
                     'id' => $risk->id,
-                    'location' => $risk->location,
+                    'location_name' => $risk->location_name,
                     'risk_level' => $risk->risk_level,
                     'risk_score' => $risk->risk_score,
                     'prediction_confidence' => $risk->prediction_confidence,
@@ -88,7 +88,7 @@ class FloodRiskController extends Controller
             'risks' => $risks,
             'count' => $risks->count(),
             'filters' => [
-                'location' => $location,
+                'location_name' => $location,
                 'limit' => $limit,
             ],
         ]);
@@ -96,7 +96,7 @@ class FloodRiskController extends Controller
 
     public function current(Request $request)
     {
-        $location = $request->get('location');
+        $location = $request->get('location_name');
 
         if (!$location) {
             return response()->json([
@@ -105,7 +105,7 @@ class FloodRiskController extends Controller
         }
 
         $currentRisk = Cache::remember("current_flood_risk_{$location}", 1800, function () use ($location) {
-            return FloodRisk::where('location', $location)
+            return FloodRisk::where('location_name', $location)
                 ->latest()
                 ->first();
         });
@@ -117,7 +117,7 @@ class FloodRiskController extends Controller
         }
 
         return response()->json([
-            'location' => $currentRisk->location,
+            'location_name' => $currentRisk->location_name,
             'risk_level' => $currentRisk->risk_level,
             'risk_score' => $currentRisk->risk_score,
             'prediction_confidence' => $currentRisk->prediction_confidence,
@@ -130,14 +130,14 @@ class FloodRiskController extends Controller
 
     public function predict(FloodRiskRequest $request)
     {
-        $location = $request->validated('location');
+        $location = $request->validated('location_name');
         
         try {
             $prediction = $this->floodPredictionService->predictFloodRisk($location);
             
             // Store the prediction
             $floodRisk = FloodRisk::create([
-                'location' => $location,
+                'location_name' => $location,
                 'risk_level' => $prediction['risk_level'],
                 'risk_score' => $prediction['risk_score'],
                 'prediction_confidence' => $prediction['confidence'],
@@ -153,7 +153,7 @@ class FloodRiskController extends Controller
                 'message' => 'Flood risk prediction generated successfully',
                 'prediction' => [
                     'id' => $floodRisk->id,
-                    'location' => $floodRisk->location,
+                    'location_name' => $floodRisk->location_name,
                     'risk_level' => $floodRisk->risk_level,
                     'risk_score' => $floodRisk->risk_score,
                     'confidence' => $floodRisk->prediction_confidence,
@@ -172,7 +172,7 @@ class FloodRiskController extends Controller
 
     public function alerts(Request $request)
     {
-        $location = $request->get('location');
+        $location = $request->get('location_name');
         $minRiskLevel = $request->get('min_risk_level', 'medium');
 
         $riskLevels = ['low', 'medium', 'high', 'critical'];
@@ -190,7 +190,7 @@ class FloodRiskController extends Controller
             ->where('created_at', '>=', Carbon::now()->subHours(24));
 
         if ($location) {
-            $query->where('location', $location);
+            $query->where('location_name', $location);
         }
 
         $alerts = $query->latest()
@@ -198,7 +198,7 @@ class FloodRiskController extends Controller
             ->map(function ($risk) {
                 return [
                     'id' => $risk->id,
-                    'location' => $risk->location,
+                    'location_name' => $risk->location,
                     'risk_level' => $risk->risk_level,
                     'risk_score' => $risk->risk_score,
                     'message' => $this->generateAlertMessage($risk),
@@ -212,7 +212,7 @@ class FloodRiskController extends Controller
             'alerts' => $alerts,
             'count' => $alerts->count(),
             'filters' => [
-                'location' => $location,
+                'location_name' => $location,
                 'min_risk_level' => $minRiskLevel,
             ],
         ]);
@@ -220,7 +220,7 @@ class FloodRiskController extends Controller
 
     public function analytics(Request $request)
     {
-        $location = $request->get('location');
+        $location = $request->get('location_name');
         $days = min($request->get('days', 7), 30);
 
         $startDate = Carbon::now()->subDays($days);
@@ -228,7 +228,7 @@ class FloodRiskController extends Controller
         $query = FloodRisk::where('created_at', '>=', $startDate);
 
         if ($location) {
-            $query->where('location', $location);
+            $query->where('location_name', $location);
         }
 
         $risks = $query->get();
@@ -253,7 +253,7 @@ class FloodRiskController extends Controller
             $query = FloodRisk::with(['weatherData']);
 
             if ($location) {
-                $query->where('location', $location);
+                $query->where('location_name', $location);
             }
 
             if ($riskLevel) {
@@ -282,8 +282,8 @@ class FloodRiskController extends Controller
     protected function getAvailableLocations()
     {
         return Cache::remember('flood_risk_locations', 3600, function () {
-            return FloodRisk::distinct('location')
-                ->pluck('location')
+            return FloodRisk::distinct('location_name')
+                ->pluck('location_name')
                 ->sort()
                 ->values();
         });
@@ -309,7 +309,7 @@ class FloodRiskController extends Controller
                 'by_level' => $risks->groupBy('risk_level')->map->count(),
                 'average_score' => round($risks->avg('risk_score'), 2),
                 'highest_risk' => $risks->max('risk_score'),
-                'locations_count' => $risks->pluck('location')->unique()->count(),
+                'locations_count' => $risks->pluck('location_name')->unique()->count(),
             ];
         });
     }
@@ -317,7 +317,7 @@ class FloodRiskController extends Controller
     protected function generateAlertMessage($risk)
     {
         $level = ucfirst($risk->risk_level);
-        return "{$level} flood risk detected in {$risk->location}. Risk score: {$risk->risk_score}/100. Please take appropriate precautions.";
+        return "{$level} flood risk detected in {$risk->location_name}. Risk score: {$risk->risk_score}/100. Please take appropriate precautions.";
     }
 
     protected function getUrgencyLevel($riskLevel)
@@ -356,16 +356,16 @@ class FloodRiskController extends Controller
     protected function getMostAtRiskLocations($startDate)
     {
         return FloodRisk::where('created_at', '>=', $startDate)
-            ->select('location')
+            ->select('location_name')
             ->selectRaw('AVG(risk_score) as avg_risk_score')
             ->selectRaw('COUNT(*) as prediction_count')
-            ->groupBy('location')
+            ->groupBy('location_name')
             ->orderBy('avg_risk_score', 'desc')
             ->take(10)
             ->get()
             ->map(function ($item) {
                 return [
-                    'location' => $item->location,
+                    'location_name' => $item->location_name,
                     'avg_risk_score' => round($item->avg_risk_score, 2),
                     'prediction_count' => $item->prediction_count,
                 ];

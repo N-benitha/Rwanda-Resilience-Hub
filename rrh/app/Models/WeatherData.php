@@ -13,7 +13,7 @@ class WeatherData extends Model
     protected $table = 'weather_data';
 
     protected $fillable = [
-        'location',
+        'location_name',
         'latitude',
         'longitude',
         'temperature',
@@ -50,7 +50,7 @@ class WeatherData extends Model
 
     public function scopeForLocation($query, string $location)
     {
-        return $query->where('location', $location);
+        return $query->where('location_name', $location);
     }
 
     public function scopeInDateRange($query, Carbon $startDate, Carbon $endDate)
@@ -103,6 +103,6 @@ class WeatherData extends Model
 
     public function floodRisks()
     {
-        return $this->hasMany(FloodRisk::class, 'location', 'location');
+        return $this->hasMany(FloodRisk::class, 'location_name', 'location_name');
     }
 }
